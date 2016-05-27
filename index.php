@@ -55,8 +55,13 @@ var chart = new CanvasJS.Chart("chartContainer",<?=json_encode($chart_options)?>
 </script>
 </head>
 <body>
+<div class='header'>
+<div class='logo'><img src="images/fujitsu_logo.gif" /></div>
+<div class='copyright'>ETERNUS AST history analyzer © 2016 by <a href="mailto:ali.allomani@ts.fujitsu.com">Ali Allomani</a></div>
+</div>
+
 <form action="index.php" method=get>
-<select name='vol[]' class='select-search' style='width:70%;'>
+<select name='vol[]' class='select-search' style='width:100%;'>
 
 <?php
 foreach($dx_vols as $vol_data){
