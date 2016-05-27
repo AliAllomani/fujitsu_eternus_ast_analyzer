@@ -12,7 +12,7 @@ $data_dir = "./AST_Backup";
 //$user_vol = intval($_GET['vol']);
 //if(!$user_vol){die("define vol");}
 
-$dx_vols_content = file("./gaca_dx87_vols.csv");
+$dx_vols_content = file($data_dir."/gaca_dx87_vols.csv");
 foreach($dx_vols_content as $vol_data){
 	$dx_vols[] = split(",", $vol_data);
 }
@@ -65,12 +65,12 @@ var chart = new CanvasJS.Chart("chartContainer",<?=json_encode($chart_options)?>
 
 <?php
 foreach($dx_vols as $vol_data){
-	print "<option value='$vol_data[0]'".(in_array($vol_data[0],$vols) ? "selected":"").">$vol_data[0] - $vol_data[1] ($vol_data[7])</option>";
+	print "<option value='$vol_data[0]'".(in_array($vol_data[0],$vols) ? "selected":"").">$vol_data[0] - $vol_data[1] ($vol_data[7]) (".($vol_data[8]/1024)." GB)</option>";
 }
 print "</select>"
 ?>
 </form>
-<div id="chartContainer" style="height: 400px; width: 100%;"></div>
+<div id="chartContainer" style="height: 400px; width: 99%;"></div>
 
 <h3>Evaluation History</h3>
 
