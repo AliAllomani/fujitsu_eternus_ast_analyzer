@@ -50,3 +50,22 @@
   .fixed_headers .date {
   
   }
+
+
+.header {
+  border: 1px solid #ccc;
+  padding:5px;
+  border-radius: 5px;
+  margin:4px;
+  height: 40px;
+}
+  .header .logo {
+display: inline-block;
+float: left;
+  }
+
+  .header .copyright {
+    float: left;
+    padding-left: 20px;
+    margin-top: 10px;
+  }
