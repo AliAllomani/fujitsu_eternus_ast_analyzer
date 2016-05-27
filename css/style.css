@@ -1,0 +1,52 @@
+.table {
+  overflow: hidden;
+}
+
+.table tr:hover {
+  background-color: #ffa;
+}
+
+.table td, th {
+  position: relative;
+}
+
+.table thead th {
+    background-color: #DDEFEF;
+    border: solid 1px #DDEEEE;
+    color: #336B6B;
+    padding: 10px;
+    text-align: left;
+    text-shadow: 1px 1px 1px #fff;
+}
+
+.table tbody td {
+    border: solid 1px #DDEEEE;
+    color: #333;
+    padding: 10px;
+    text-shadow: 1px 1px 1px #fff;
+}
+
+
+.fixed_headers  {
+  width:'100%';
+}
+
+.fixed_headers thead{
+  display: block;
+}
+
+.fixed_headers tbody{
+ display: block;
+   overflow: auto;
+   height: 500px;
+  }
+
+  .fixed_headers tbody td,   .fixed_headers thead th{
+    width:80px;
+    padding:0px;
+    text-align: center;
+  }
+
+  .fixed_headers .date {
+  
+  }
