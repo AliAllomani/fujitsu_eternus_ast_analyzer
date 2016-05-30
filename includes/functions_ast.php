@@ -66,20 +66,52 @@ array(
 	return $chart_options;
 }
 
+function vol_id_to_eval_filename($vol){
+	return "Details_".str_pad( $vol, 5,0, STR_PAD_LEFT)."_00.csv";
+}
+
 /** 
 Read AST history from eval csv files and return array
 **/
 
 function read_vols_allocation_from_eval($vols,$data_dir){
+
+/** 
+Get eval files list 
+**/
+
+$files_cache_file = "./cache/files_".md5(serialize($vols)).".txt";
 	
-	$chart_date_format = "D d M";
+if(file_exists($files_cache_file)){
+	$eval_files = (array) json_decode(file_get_contents($files_cache_file),true);
+}else{
+	$all_eval_files = (array) glob($data_dir."/*/perf/*/evaluation/Details_*_*.csv");
+	$vols_eval_files_pattern = implode("|",array_map('vol_id_to_eval_filename',$vols));
+	$eval_files = array();
+	foreach($all_eval_files as $eval_file){
+		if(preg_match_all("/(".$vols_eval_files_pattern.")/", $eval_file)){
+			$eval_files[] = $eval_file;
+		}
+	}
+
+$eval_files = (array) $eval_files;
+
+// write to cache
+file_put_contents($files_cache_file, json_encode($eval_files));
+}
+
+
+/**
+Read data from eval files
+**/
+
+$chart_date_format = "D d M";
 $data = array();
-foreach($vols as $vol){
-$eval_files = (array) glob($data_dir."/*/perf/*/evaluation/Details_".str_pad( $vol, 5,0, STR_PAD_LEFT)."_*.csv");
-	
+$data_cache_file = "./cache/data_".md5(serialize($eval_files)).".txt";
 
-
-
+if(file_exists($data_cache_file)){
+	$data = (array) json_decode(file_get_contents($data_cache_file),true);
+}else{
 foreach($eval_files as $file){
 	$content = file($file);
 	$key_date = date("Ymd",strtotime(substr($content[0],0,10)));
@@ -91,8 +123,14 @@ foreach($eval_files as $file){
 			$data["$key_date"]['total'] += 1;
 	}
 }
-}
+
 $data = (array) $data;
+
+// write to cache
+file_put_contents($data_cache_file, json_encode($data));
+}
+
+
 
 
 $data_models = array(0=>"",1=>"",2=>"");
