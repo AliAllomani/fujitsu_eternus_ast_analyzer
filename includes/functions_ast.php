@@ -7,8 +7,9 @@ construct data array for chart
 function get_chart_options($title,$data_models){
 
 	$chart_options  = array(
-"title"=>array("text"=>$title),
+"title"=>array("text"=>$title,"fontSize"=>18),
 "animationEnabled"=>true,
+"exportEnabled"=>true,
 "legend"=>array("verticalAlign"=>"bottom","horizontalAlign"=>"center"),
 "toolTip"=>array(
 "shared"=>true
@@ -17,9 +18,11 @@ function get_chart_options($title,$data_models){
 "data"=>array(
 array(
 "name" => "Low",
-"type"=> "spline",       
-"indexLabelFontFamily" => "Garamond",       
+//"type"=> "stackedArea",  
+"type"=> "spline",            
 "indexLabelFontSize" => 13,
+"indexLabelFontColor"=>"red",
+
 "color"=>"rgba(211,19,14,.8)",
 "indexLabel"=>"{y}%",
 //"startAngle"=>"-20",      
@@ -30,10 +33,11 @@ array(
 ),
 array(
 "name" => "Middle",
-"type"=> "spline",       
-"indexLabelFontFamily" => "Garamond",       
+"type"=> "spline",              
 "indexLabelFontSize" => 13,
-"color"=>"rgba(95,53,87,.8)",
+"indexLabelFontColor"=>"green",
+
+"color"=>"rgba(100, 170, 40, 0.9)",
 "indexLabel"=>"{y}%",
 //"startAngle"=>"-20",      
 "showInLegend"=>true,
@@ -43,9 +47,10 @@ array(
 ),
 array(
 "name" => "High",
-"type"=> "spline",       
-"indexLabelFontFamily" => "Garamond",       
+"type"=> "spline",           
 "indexLabelFontSize" => 13,
+"indexLabelFontColor"=>"blue",
+
 "color"=>"rgba(22,115,211,.9)",
 "indexLabel"=>"{y}%",
 //"startAngle"=>"-20",      
@@ -59,6 +64,53 @@ array(
 )
 ) ;
 	return $chart_options;
+}
+
+/** 
+Read AST history from eval csv files and return array
+**/
+
+function read_vols_allocation_from_eval($vols,$data_dir){
+	
+	$chart_date_format = "D d M";
+$data = array();
+foreach($vols as $vol){
+$eval_files = (array) glob($data_dir."/*/perf/*/evaluation/Details_".str_pad( $vol, 5,0, STR_PAD_LEFT)."_*.csv");
+	
+
+
+
+foreach($eval_files as $file){
+	$content = file($file);
+	$key_date = date("Ymd",strtotime(substr($content[0],0,10)));
+
+	for($i=2;$i<count($content);$i++){
+		$content_data = split(",",$content[$i]);	
+		$key_tier = strtolower($content_data[3]);
+			$data["$key_date"]["$key_tier"] += 1;
+			$data["$key_date"]['total'] += 1;
+	}
+}
+}
+$data = (array) $data;
+
+
+$data_models = array(0=>"",1=>"",2=>"");
+
+/** Get  data models */
+
+foreach($data as $key=>$val){
+	
+//$total = $val[4]+$val[5]+$val[6];
+
+
+$data_models[0][] = array("label"=>date($chart_date_format,strtotime($key)),"y"=>(float) number_format($val['low']/$val['total']*100,2),"s"=>$val['low']);	
+$data_models[1][] = array("label"=>date($chart_date_format,strtotime($key)),"y"=>(float) number_format($val['mid']/$val['total']*100,2),"s"=>$val['mid']);	
+$data_models[2][] = array("label"=>date($chart_date_format,strtotime($key)),"y"=>(float) number_format($val['high']/$val['total']*100,2),"s"=>$val['high']);
+	
+}
+
+return (array) $data_models;
 }
 
 
@@ -79,29 +131,62 @@ foreach($files as $file){
 	for($i=1;$i<count($content);$i++){
 		$content_data = split(",",$content[$i]);
 		if(in_array($content_data[0],$vols)){
-			$max = (int) count($data);
-			$data[$max] = $content_data;
-			$data[$max][] = $file;
+		//	$max = (int) count($data);
+		//	$data[$max] = $content_data;
+		//	$data[$max][] = $file;
+
+			$key_date = date("Ymd",strtotime($content_data[1]));
+			$key_vol = $content_data[0];
+			$data["$key_date"][$key_vol] = $content_data;
 		}
 	}
 }
 
-usort($data,'sort_by_time');
+$data = (array) $data;
+
+//print_r($data);
+//foreach($data as $arr_date=>$arr_vol){
+//	print "$arr_date : ". count($arr_vol) . "\n";
+//}
+//die();
+
+//usort($data,'sort_by_time');
 //$data_u = array_unique($data, SORT_REGULAR);
-$data_u = (array) filter_duplicate_dates($data);
+//$data_u = (array) filter_duplicate_dates($data);
+//$data_u = $data;
+
+/** get sum per volume **/
+foreach($data as $arr_date=>$arr_vol){
+	$low_cap=0;$mid_cap=0;$high_cap = 0;
+foreach($arr_vol as $vol_data){
+$low_cap +=  $vol_data[4];
+$mid_cap +=  $vol_data[5];
+$high_cap +=   $vol_data[6];
+}
+
+$data_u[] = array(
+	"low"=>$low_cap,
+	"mid"=>$mid_cap,
+	"high"=>$high_cap,
+	"total"=>($low_cap+$mid_cap+$high_cap),
+	"date"=>$arr_date
+	);
+}
+
 $data_models = array(0=>"",1=>"",2=>"");
 
-
+//print_r($data_u);
+//die();
 /** Get  data models */
-$i=1;
+
 foreach($data_u as $val){
 	
-$total = $val[4]+$val[5]+$val[6];
+//$total = $val[4]+$val[5]+$val[6];
 
-$data_models[0][] = array("label"=>date($chart_date_format,strtotime($val[1])),"y"=>floor($val[4]/$total*100),"s"=>$val[4]);	
-$data_models[1][] = array("label"=>date($chart_date_format,strtotime($val[1])),"y"=>floor($val[5]/$total*100),"s"=>$val[5]);	
-$data_models[2][] = array("label"=>date($chart_date_format,strtotime($val[1])),"y"=>floor($val[6]/$total*100),"s"=>$val[6]);
-$i++;	
+$data_models[0][] = array("label"=>date($chart_date_format,strtotime($val['date'])),"y"=>floor($val['low']/$val['total']*100),"s"=>$val['low']);	
+$data_models[1][] = array("label"=>date($chart_date_format,strtotime($val['date'])),"y"=>floor($val['mid']/$val['total']*100),"s"=>$val['mid']);	
+$data_models[2][] = array("label"=>date($chart_date_format,strtotime($val['date'])),"y"=>floor($val['high']/$val['total']*100),"s"=>$val['high']);
+	
 }
 
 return (array) $data_models;

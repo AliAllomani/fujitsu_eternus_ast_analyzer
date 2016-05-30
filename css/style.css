@@ -38,7 +38,7 @@
 .fixed_headers tbody{
  display: block;
    overflow: auto;
-   height: 500px;
+   height: 600px;
   }
 
   .fixed_headers tbody td,   .fixed_headers thead th{
@@ -68,4 +68,27 @@ float: left;
     float: left;
     padding-left: 20px;
     margin-top: 10px;
+  }
+
+  legend {
+     border: 1px solid #ccc;
+  padding:5px;
+  border-radius: 5px;
+  margin:4px;
+  }
+
+  label {
+    color: orange;
+  }
+
+  input[type="text"] {
+    margin:3px;
+    border-radius: 3px;
+     border: 1px solid #ccc;
+  }
+
+  input[type="submit"] {
+    margin:3px;
+    border-radius: 3px;
+     border: 1px solid #ccc;
   }
