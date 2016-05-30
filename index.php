@@ -24,11 +24,11 @@ $vol_name_type = $_REQUEST['vol_name_type'];
 if($vol_name){
 foreach($dx_vols as $val){
 	if($vol_name_type == "regex"){
-if(preg_match_all("/".$vol_name."/", $val[1])){
+if(preg_match_all("/".$vol_name."/i", $val[1])){
 		$vols[] = $val[0];
 	}
 	}else{
-	if(strstr($val[1],$vol_name)){
+	if(stristr($val[1],$vol_name)){
 		$vols[] = $val[0];
 	}
 }
