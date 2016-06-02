@@ -1,23 +1,24 @@
 <?php
-
 /**
-Author : Ali Allomani <ali.allomani@ts.fujitsu.com>
-**/
+ *  Fujitsu ETERNUS AST history analyzer
+ * 
+ * @package Fujitsu ETERNUS AST history analyzer
+ * @version 1.0
+ * @copyright (c) 2016 Ali Allomani , All rights reserved.
+ * @author Ali Allomani <ali.allomani@ts.fujitsu.com>
+ * @license GNU General Public License version 3.0 (GPLv3)
+ * 
+ */
 
+// include required functions 
 require("./includes/functions_ast.php");
 
 
-$data_dir = "./AST_Backup";
 
-//$user_vol = intval($_GET['vol']);
-//if(!$user_vol){die("define vol");}
+//Get volumes list
+$dx_vols = eternus_ast::get_dx_vols_list();
 
-$dx_vols_content = file($data_dir."/gaca_dx87_vols.csv");
-foreach($dx_vols_content as $vol_data){
-	$vol_data_arr = split(",", $vol_data);
-	$dx_vols[$vol_data_arr[0]] = $vol_data_arr;
-}
-
+//process request vols
 $vol_name = trim($_REQUEST['vol_name']);
 $vol_name_type = $_REQUEST['vol_name_type'];
 
@@ -39,13 +40,11 @@ $vols = (array) $_REQUEST['vol'];
 
 if(!count($vols)){ $vols = array('0');}
 
-//$vols = array($user_vol);
+// get data of vols
+$data_models = eternus_ast::read_vols_allocation_from_eval($vols);
 
-$data_models = read_vols_allocation_from_eval($vols,$data_dir);
-
-$chart_options = get_chart_options("AST allocation History",$data_models);
-
-
+// construct chart data
+$chart_options = eternus_ast::get_chart_options("AST allocation History",$data_models);
 
 
 ?>
@@ -72,6 +71,7 @@ var chart = new CanvasJS.Chart("chartContainer",<?=json_encode($chart_options)?>
 });
 
 </script>
+<title>Fujitsu ETERNUS AST history analyzer</title>
 </head>
 <body>
 <div class='header'>
@@ -145,7 +145,7 @@ print "<tr>
 print "</tbody>
 </table>";
 }else{
- $eval_content_arr = read_vol_ast_eval_history($vols[0],$data_dir);
+ $eval_content_arr = eternus_ast::read_vol_ast_eval_history($vols[0]);
 
 		print "
 		<h3>Evaluation History</h3>
@@ -223,3 +223,4 @@ print "</tbody>
 ?>
 
 </body>
+</html>

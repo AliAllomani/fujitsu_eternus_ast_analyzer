@@ -1,15 +1,38 @@
 <?php
 
 /**
+ *  Fujitsu ETERNUS AST class
+ * 
+ * @package Fujitsu ETERNUS AST history analyzer
+ * @version 1.0
+ * @copyright (c) 2016 Ali Allomani , All rights reserved.
+ * @author Ali Allomani <ali.allomani@ts.fujitsu.com>
+ * @license GNU General Public License version 3.0 (GPLv3)
+ * 
+ */
+
+class eternus_ast {
+
+private static $dx_vols_list_filename = "./AST_Backup/gaca_dx87_vols.csv";
+private static $data_dir = "./AST_Backup";
+private static $cache_dir = "./cache";
+
+
+private static $chart_date_format = "D d M";
+
+
+/**
 construct data array for chart 
 **/
 
-function get_chart_options($title,$data_models){
+public static function get_chart_options($title,$data_models){
 
 	$chart_options  = array(
 "title"=>array("text"=>$title,"fontSize"=>18),
 "animationEnabled"=>true,
 "exportEnabled"=>true,
+"axisY"=>array("labelFontSize"=>13),
+"axisX"=>array("labelFontSize"=>13),
 "legend"=>array("verticalAlign"=>"bottom","horizontalAlign"=>"center"),
 "toolTip"=>array(
 "shared"=>true
@@ -28,7 +51,7 @@ array(
 //"startAngle"=>"-20",      
 "showInLegend"=>true,
 //"legendMarkerType"=>"square",
-//"toolTipContent"=>"{label} ({s}) {y}%",
+"toolTipContent"=>"<b>{label}</b> <br> <span style='\"'color: red;'\"'>{name}</span> {y}% ({s})",
 "dataPoints"=>$data_models[0]
 ),
 array(
@@ -42,7 +65,7 @@ array(
 //"startAngle"=>"-20",      
 "showInLegend"=>true,
 //"legendMarkerType"=>"square",
-//"toolTipContent"=>"{name} {label} ({s}) {y}%",
+"toolTipContent"=>"<span style='\"'color: green;'\"'>{name}</span> {y}% ({s})",
 "dataPoints"=>$data_models[1]
 ),
 array(
@@ -56,7 +79,7 @@ array(
 //"startAngle"=>"-20",      
 "showInLegend"=>true,
 //"legendMarkerType"=>"square",
-//"toolTipContent"=>"{label} ({y}) {y}%",
+"toolTipContent"=>"<span style='\"'color: blue;'\"'>{name}</span> {y}% ({s})",
 "dataPoints"=>$data_models[2]
 )
 
@@ -66,27 +89,57 @@ array(
 	return $chart_options;
 }
 
-function vol_id_to_eval_filename($vol){
+private static function vol_id_to_eval_filename($vol){
 	return "Details_".str_pad( $vol, 5,0, STR_PAD_LEFT)."_00.csv";
+}
+
+/**
+Get DX volumes list 
+@return array
+*/
+
+public static function get_dx_vols_list(){
+$dx_vols_content = file(self::$dx_vols_list_filename);
+foreach($dx_vols_content as $vol_data){
+	$vol_data_arr = split(",", $vol_data);
+	$dx_vols[$vol_data_arr[0]] = $vol_data_arr;
+}
+return $dx_vols;
 }
 
 /** 
 Read AST history from eval csv files and return array
-**/
+*/
 
-function read_vols_allocation_from_eval($vols,$data_dir){
+public static function read_vols_allocation_from_eval($vols){
 
 /** 
 Get eval files list 
 **/
 
-$files_cache_file = "./cache/files_".md5(serialize($vols)).".txt";
+$files_cache_file = self::$cache_dir."/eval_files.txt";
 	
 if(file_exists($files_cache_file)){
-	$eval_files = (array) json_decode(file_get_contents($files_cache_file),true);
+$all_eval_files = (array) json_decode(file_get_contents($files_cache_file),true);
 }else{
-	$all_eval_files = (array) glob($data_dir."/*/perf/*/evaluation/Details_*_*.csv");
-	$vols_eval_files_pattern = implode("|",array_map('vol_id_to_eval_filename',$vols));
+$all_eval_files = (array) glob(self::$data_dir."/*/perf/*/evaluation/Details_*_*.csv");
+// write to cache
+file_put_contents($files_cache_file, json_encode($all_eval_files));
+}
+
+
+/**
+Read data from eval files
+**/
+
+$data = array();
+$data_cache_file = self::$cache_dir."/data_".md5(json_encode($vols)).".txt";
+
+if(file_exists($data_cache_file)){
+	$data = (array) json_decode(file_get_contents($data_cache_file),true);
+}else{
+
+	$vols_eval_files_pattern = implode("|",array_map('self::vol_id_to_eval_filename',$vols));
 	$eval_files = array();
 	foreach($all_eval_files as $eval_file){
 		if(preg_match_all("/(".$vols_eval_files_pattern.")/", $eval_file)){
@@ -96,23 +149,8 @@ if(file_exists($files_cache_file)){
 
 $eval_files = (array) $eval_files;
 
-// write to cache
-file_put_contents($files_cache_file, json_encode($eval_files));
-}
-
-
-/**
-Read data from eval files
-**/
-
-$chart_date_format = "D d M";
-$data = array();
-$data_cache_file = "./cache/data_".md5(serialize($eval_files)).".txt";
-
-if(file_exists($data_cache_file)){
-	$data = (array) json_decode(file_get_contents($data_cache_file),true);
-}else{
 foreach($eval_files as $file){
+
 	$content = file($file);
 	$key_date = date("Ymd",strtotime(substr($content[0],0,10)));
 
@@ -142,10 +180,17 @@ foreach($data as $key=>$val){
 //$total = $val[4]+$val[5]+$val[6];
 
 
-$data_models[0][] = array("label"=>date($chart_date_format,strtotime($key)),"y"=>(float) number_format($val['low']/$val['total']*100,2),"s"=>$val['low']);	
-$data_models[1][] = array("label"=>date($chart_date_format,strtotime($key)),"y"=>(float) number_format($val['mid']/$val['total']*100,2),"s"=>$val['mid']);	
-$data_models[2][] = array("label"=>date($chart_date_format,strtotime($key)),"y"=>(float) number_format($val['high']/$val['total']*100,2),"s"=>$val['high']);
-	
+
+$data_models[0][] = array(
+	"label"=>date(self::$chart_date_format,strtotime($key)),
+	"y"=>(float) number_format($val['low']/$val['total']*100,2),"s"=>number_format(($val['low']*1344)/1024/1024,2)." TB");	
+$data_models[1][] = array(
+	"label"=>date(self::$chart_date_format,strtotime($key)),
+	"y"=>(float) number_format($val['mid']/$val['total']*100,2),"s"=>number_format(($val['mid']*1344)/1024/1024,2)." TB");	
+$data_models[2][] = array(
+	"label"=>date(self::$chart_date_format,strtotime($key)),
+	"y"=>(float) number_format($val['high']/$val['total']*100,2),"s"=>number_format(($val['high']*1344)/1024/1024,2)." TB");
+
 }
 
 return (array) $data_models;
@@ -156,11 +201,11 @@ return (array) $data_models;
 Read AST history from csv files and return array
 **/
 
-function read_ast_history($vols,$data_dir){
+public static function read_ast_history($vols){
 
-	$chart_date_format = "D d M";
+	
 
-	$files = glob($data_dir."/*/perf/*/history/*.csv");
+	$files = glob(self::$data_dir."/*/perf/*/history/*.csv");
 $data = array();
 
 
@@ -221,9 +266,9 @@ foreach($data_u as $val){
 	
 //$total = $val[4]+$val[5]+$val[6];
 
-$data_models[0][] = array("label"=>date($chart_date_format,strtotime($val['date'])),"y"=>floor($val['low']/$val['total']*100),"s"=>$val['low']);	
-$data_models[1][] = array("label"=>date($chart_date_format,strtotime($val['date'])),"y"=>floor($val['mid']/$val['total']*100),"s"=>$val['mid']);	
-$data_models[2][] = array("label"=>date($chart_date_format,strtotime($val['date'])),"y"=>floor($val['high']/$val['total']*100),"s"=>$val['high']);
+$data_models[0][] = array("label"=>date(self::$chart_date_format,strtotime($val['date'])),"y"=>floor($val['low']/$val['total']*100),"s"=>$val['low']);	
+$data_models[1][] = array("label"=>date(self::$chart_date_format,strtotime($val['date'])),"y"=>floor($val['mid']/$val['total']*100),"s"=>$val['mid']);	
+$data_models[2][] = array("label"=>date(self::$chart_date_format,strtotime($val['date'])),"y"=>floor($val['high']/$val['total']*100),"s"=>$val['high']);
 	
 }
 
@@ -235,8 +280,8 @@ return (array) $data_models;
 Read AST Evalutaion history from csv file
 **/
 
-function read_vol_ast_eval_history($vol,$data_dir){
-$eval_files = (array) glob($data_dir."/*/perf/*/evaluation/Details_".str_pad( $vol, 5,0, STR_PAD_LEFT)."_*.csv");
+public static function read_vol_ast_eval_history($vol){
+$eval_files = (array) glob(self::$data_dir."/*/perf/*/evaluation/Details_".str_pad( $vol, 5,0, STR_PAD_LEFT)."_*.csv");
 $c=0;
 foreach($eval_files as $eval_file){
 	//print file_get_contents($eval_file);
@@ -257,13 +302,13 @@ return (array) $eval_content_arr;
 sort array by sub array value 
 **/
 
-function sort_by_time($a, $b) {
+private static function sort_by_time($a, $b) {
   return strtotime($a[1]) - strtotime($b[1]);
 }
 
 
 /** remove duplicated dates **/
-function filter_duplicate_dates($array)
+private static function filter_duplicate_dates($array)
 {
   $new_array = array();
   $vals = array();
@@ -277,4 +322,5 @@ function filter_duplicate_dates($array)
   }
 
   return $new_array;
+}
 }
