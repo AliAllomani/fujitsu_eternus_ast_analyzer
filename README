@@ -1,0 +1,25 @@
+Fujitsu AST History analyzer
+-------------
+
+Requirements  : 
+
+PHP5.3+
+
+
+Configuration :
+
+Edit the following line in index.php file to fit your environment 
+
+
+eternus_ast::config("./AST_Backup/gaca_dx87_vols.csv","./AST_Backup","./cache");
+
+Parameters :
+1: Volumes list in csv format
+2: AST data folder
+3: cache folder
+
+
+NOTE:: make sure to purge cache folder with every update to AST data dir
+
+
+
