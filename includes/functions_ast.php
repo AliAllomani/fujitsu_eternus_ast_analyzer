@@ -13,21 +13,30 @@
 
 class eternus_ast {
 
-private static $dx_vols_list_filename = "./AST_Backup/gaca_dx87_vols.csv";
-private static $data_dir = "./AST_Backup";
+private static $dx_vols_list_filename = "";
+private static $data_dir = "";
 private static $cache_dir = "./cache";
 
 
 private static $chart_date_format = "D d M";
 
+/**
+ * Config 
+ */
+
+public static function config($dx_vols_list_filename,$ast_data_dir,$cache_dir="./cache"){
+    self::$dx_vols_list_filename = $dx_vols_list_filename;
+    self::$data_dir = $ast_data_dir;
+    self::$cache_dir = $cache_dir;
+}
 
 /**
 construct data array for chart 
-**/
+*/
 
 public static function get_chart_options($title,$data_models){
 
-	$chart_options  = array(
+$chart_options  = array(
 "title"=>array("text"=>$title,"fontSize"=>18),
 "animationEnabled"=>true,
 "exportEnabled"=>true,
@@ -94,11 +103,15 @@ private static function vol_id_to_eval_filename($vol){
 }
 
 /**
-Get DX volumes list 
-@return array
+* Get DX volumes list 
+* @return array
 */
 
 public static function get_dx_vols_list(){
+    if(!file_exists(self::$dx_vols_list_filename)){
+        throw new Exception("DX volumes list file is not exist : ".self::$dx_vols_list_filename);
+    }
+$dx_vols = array();    
 $dx_vols_content = file(self::$dx_vols_list_filename);
 foreach($dx_vols_content as $vol_data){
 	$vol_data_arr = split(",", $vol_data);
@@ -109,6 +122,8 @@ return $dx_vols;
 
 /** 
 Read AST history from eval csv files and return array
+* @param array $vols Volumes IDs list 
+ * @return array allocation history
 */
 
 public static function read_vols_allocation_from_eval($vols){
@@ -117,6 +132,10 @@ public static function read_vols_allocation_from_eval($vols){
 Get eval files list 
 **/
 
+    if(!is_dir(self::$data_dir)){
+        throw new Exception("AST Data directory is not exist : ".self::$data_dir);
+    }
+    
 $files_cache_file = self::$cache_dir."/eval_files.txt";
 	
 if(file_exists($files_cache_file)){
@@ -128,9 +147,9 @@ file_put_contents($files_cache_file, json_encode($all_eval_files));
 }
 
 
-/**
+/*
 Read data from eval files
-**/
+*/
 
 $data = array();
 $data_cache_file = self::$cache_dir."/data_".md5(json_encode($vols)).".txt";
@@ -198,7 +217,7 @@ return (array) $data_models;
 
 
 /** 
-Read AST history from csv files and return array
+Read AST reallocation history from csv files and return array
 **/
 
 public static function read_ast_history($vols){
@@ -277,10 +296,13 @@ return (array) $data_models;
 
 
 /**
-Read AST Evalutaion history from csv file
+Read AST Evalutaion history for vol
+ * @param int $vol Volume ID
+ * @return array Array of eval history
 **/
 
 public static function read_vol_ast_eval_history($vol){
+$eval_content_arr = array();
 $eval_files = (array) glob(self::$data_dir."/*/perf/*/evaluation/Details_".str_pad( $vol, 5,0, STR_PAD_LEFT)."_*.csv");
 $c=0;
 foreach($eval_files as $eval_file){
@@ -308,8 +330,7 @@ private static function sort_by_time($a, $b) {
 
 
 /** remove duplicated dates **/
-private static function filter_duplicate_dates($array)
-{
+private static function filter_duplicate_dates($array){
   $new_array = array();
   $vals = array();
   
@@ -322,5 +343,119 @@ private static function filter_duplicate_dates($array)
   }
 
   return $new_array;
+}
+
+/**
+ * Print volumes list table
+ * @param array $vols Volumes
+ * @return true
+ */
+public static function print_vols_table($vols){
+    
+$dx_vols = self::get_dx_vols_list();
+print "<h3>Volumes list</h3>
+<table class=table>
+<thead>
+<tr>
+<th>#</th>
+<th>Name</th>
+<th>Size (GB)</th>
+<th>pool</th>
+</tr>
+</thead>
+<tbody>
+";
+foreach($vols as $val){
+print "<tr>
+<td>$val</td>
+<td>".$dx_vols[$val][1]."</td>
+<td>".number_format($dx_vols[$val][8]/1024,2)."</td>
+<td>".$dx_vols[$val][7]."</td>
+</tr>
+";
+}
+print "</tbody>
+</table>";
+}
+
+/**
+ * Print AST Evaluation history table
+ * @param int $vol Volume ID
+ * @return true
+ */
+public static function print_ast_eval_history($vol=0){
+    $eval_content_arr = self::read_vol_ast_eval_history($vol);
+
+		print "
+		<h3>Evaluation History</h3>
+		<table class='table fixed_headers'>
+		<thead>
+		<tr>
+		<th class='date'></th>
+		<th colspan=3>Low</th>
+		<th colspan=3>Middle</th>
+		<th colspan=3>High</th>
+		</tr><tr>";
+		print "<th class='date'>date</th>";
+
+	 	print "<th>Match</th>";
+	 	print "<th>ToMid</th>";
+	 	print "<th>ToHigh</th>";
+	 
+	 	
+
+	 	print "<th>ToLow</th>";
+	 	print "<th>Match</th>";
+	 	print "<th>ToHigh</th>";
+
+
+		print "<th>ToLow</th>";
+	 	print "<th>ToMid</th>";
+	 	print "<th>Match</th>";
+
+	 	print "</tr>
+	 	</thead>
+	 	<tbody>";
+	 foreach($eval_content_arr as $val){
+
+	 	$total = 0;
+	 	foreach($val as $kv=>$vv){
+	 		if($kv !== "date"){$total += count($vv);}	
+	 	}
+
+	 	print "<tr>";
+	 	print "<td class='date'>".substr($val['date'],5,5)."</td>";
+
+	 	if(count($val[LOW_NotEnoughCapacity])){
+			print "<td colspan=3>".number_format(((count($val[LOW_NotEnoughCapacity])/$total)*100),2)."% No Capacity !</td>";
+	 	}else{
+	 	print "<td>".number_format(((count($val[LOW_Match])/$total)*100),2)."%</td>";
+	 	print "<td>".number_format(((count($val[LOW_UpgradeToMiddle])/$total)*100),2)."%</td>";
+	 	print "<td>".number_format(((count($val[LOW_UpgradeToHigh])/$total)*100),2)."%</td>";
+	 	}
+	 	
+
+	 	if(count($val[MID_NotEnoughCapacity])){
+			print "<td colspan=3>".number_format(((count($val[MID_NotEnoughCapacity])/$total)*100),2)."% No Capacity !</td>";
+	 	}else{
+	 	print "<td>".number_format(((count($val[MID_DowngradeToLow])/$total)*100),2)."%</td>";
+	 	print "<td>".number_format(((count($val[MID_Match])/$total)*100),2)."%</td>";
+	 	print "<td>".number_format(((count($val[MID_UpgradeToHigh])/$total)*100),2)."%</td>";
+	 	}
+
+
+	 	if(count($val[HIGH_NotEnoughCapacity])){
+			print "<td colspan=3>".number_format(((count($val[HIGH_NotEnoughCapacity])/$total)*100),2)."% No Capacity !</td>";
+	 	}else{
+		print "<td>".number_format(((count($val[HIGH_DowngradeToLow])/$total)*100),2)."%</td>";
+	 	print "<td>".number_format(((count($val[HIGH_DowngradeToMiddle])/$total)*100),2)."%</td>";
+	 	print "<td>".number_format(((count($val[HIGH_Match])/$total)*100),2)."%</td>";
+	 	}
+
+	 	print "<tr>";
+	 }
+	 print "
+	 </tbody>
+	 </table>";
 }
 }

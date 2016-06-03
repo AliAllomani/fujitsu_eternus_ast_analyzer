@@ -13,14 +13,15 @@
 // include required functions 
 require("./includes/functions_ast.php");
 
+eternus_ast::config("./AST_Backup/gaca_dx87_vols.csv","./AST_Backup","./cache");
 
 
 //Get volumes list
 $dx_vols = eternus_ast::get_dx_vols_list();
 
 //process request vols
-$vol_name = trim($_REQUEST['vol_name']);
-$vol_name_type = $_REQUEST['vol_name_type'];
+$vol_name = isset($_REQUEST['vol_name']) ? trim($_REQUEST['vol_name']):"";
+$vol_name_type = isset($_REQUEST['vol_name_type']) ? trim($_REQUEST['vol_name_type']) : "";
 
 if($vol_name){
 foreach($dx_vols as $val){
@@ -35,7 +36,7 @@ if(preg_match_all("/".$vol_name."/i", $val[1])){
 }
 }
 }else{
-$vols = (array) $_REQUEST['vol'];
+$vols = (array) (isset($_REQUEST['vol']) ? $_REQUEST['vol'] : array());
 }
 
 if(!count($vols)){ $vols = array('0');}
@@ -121,103 +122,9 @@ print "<legend><b>No. of Volumes : </b> ".count($vols). "</legend>";
 <?php
 
 if(count($vols) > 1) {
-print "<h3>Volumes list</h3>
-<table class=table>
-<thead>
-<tr>
-<th>#</th>
-<th>Name</th>
-<th>Size (GB)</th>
-<th>pool</th>
-</tr>
-</thead>
-<tbody>
-";
-foreach($vols as $val){
-print "<tr>
-<td>$val</td>
-<td>".$dx_vols[$val][1]."</td>
-<td>".number_format($dx_vols[$val][8]/1024,2)."</td>
-<td>".$dx_vols[$val][7]."</td>
-</tr>
-";
-}
-print "</tbody>
-</table>";
+    eternus_ast::print_vols_table($vols);
 }else{
- $eval_content_arr = eternus_ast::read_vol_ast_eval_history($vols[0]);
-
-		print "
-		<h3>Evaluation History</h3>
-		<table class='table fixed_headers'>
-		<thead>
-		<tr>
-		<th class='date'></th>
-		<th colspan=3>Low</th>
-		<th colspan=3>Middle</th>
-		<th colspan=3>High</th>
-		</tr><tr>";
-		print "<th class='date'>date</th>";
-
-	 	print "<th>Match</th>";
-	 	print "<th>ToMid</th>";
-	 	print "<th>ToHigh</th>";
-	 
-	 	
-
-	 	print "<th>ToLow</th>";
-	 	print "<th>Match</th>";
-	 	print "<th>ToHigh</th>";
-
-
-		print "<th>ToLow</th>";
-	 	print "<th>ToMid</th>";
-	 	print "<th>Match</th>";
-
-	 	print "</tr>
-	 	</thead>
-	 	<tbody>";
-	 foreach($eval_content_arr as $val){
-
-	 	$total = 0;
-	 	foreach($val as $kv=>$vv){
-	 		if($kv !== "date"){$total += count($vv);}	
-	 	}
-
-	 	print "<tr>";
-	 	print "<td class='date'>".substr($val['date'],5,5)."</td>";
-
-	 	if(count($val[LOW_NotEnoughCapacity])){
-			print "<td colspan=3>".number_format(((count($val[LOW_NotEnoughCapacity])/$total)*100),2)."% No Capacity !</td>";
-	 	}else{
-	 	print "<td>".number_format(((count($val[LOW_Match])/$total)*100),2)."%</td>";
-	 	print "<td>".number_format(((count($val[LOW_UpgradeToMiddle])/$total)*100),2)."%</td>";
-	 	print "<td>".number_format(((count($val[LOW_UpgradeToHigh])/$total)*100),2)."%</td>";
-	 	}
-	 	
-
-	 	if(count($val[MID_NotEnoughCapacity])){
-			print "<td colspan=3>".number_format(((count($val[MID_NotEnoughCapacity])/$total)*100),2)."% No Capacity !</td>";
-	 	}else{
-	 	print "<td>".number_format(((count($val[MID_DowngradeToLow])/$total)*100),2)."%</td>";
-	 	print "<td>".number_format(((count($val[MID_Match])/$total)*100),2)."%</td>";
-	 	print "<td>".number_format(((count($val[MID_UpgradeToHigh])/$total)*100),2)."%</td>";
-	 	}
-
-
-	 	if(count($val[HIGH_NotEnoughCapacity])){
-			print "<td colspan=3>".number_format(((count($val[HIGH_NotEnoughCapacity])/$total)*100),2)."% No Capacity !</td>";
-	 	}else{
-		print "<td>".number_format(((count($val[HIGH_DowngradeToLow])/$total)*100),2)."%</td>";
-	 	print "<td>".number_format(((count($val[HIGH_DowngradeToMiddle])/$total)*100),2)."%</td>";
-	 	print "<td>".number_format(((count($val[HIGH_Match])/$total)*100),2)."%</td>";
-	 	}
-
-	 	print "<tr>";
-	 }
-	 print "
-	 </tbody>
-	 </table>";
+    eternus_ast::print_ast_eval_history($vols[0]);
 }
 
 ?>
